@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SchoolSync – Timetables</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0d1117; --surface:#161b22; --card:#1c2333; --border:#30363d;
+      --accent:#f0a500; --accent2:#e05c2a; --text:#e6edf3; --muted:#8b949e;
+      --success:#3fb950; --danger:#f85149; --radius:10px;
+      --mon:#58a6ff; --tue:#3fb950; --wed:#f0a500; --thu:#d2a8ff; --fri:#ffa198;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    /* ── HEADER ── */
+    header {
+      background:var(--surface); border-bottom:1px solid var(--border);
+      padding:0 32px; height:60px; display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100;
+    }
+    .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; display:flex; align-items:center; gap:10px; }
+    .logo-icon { width:32px; height:32px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .header-right { display:flex; align-items:center; gap:10px; }
+    .btn-sm {
+      background:transparent; border:1px solid var(--border); border-radius:6px;
+      padding:7px 14px; color:var(--muted); font-size:0.85rem; cursor:pointer;
+      text-decoration:none; transition:all .2s; font-family:'DM Sans',sans-serif;
+    }
+    .btn-sm:hover { border-color:var(--text); color:var(--text); }
+    .btn-regen {
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#000; font-family:'Syne',sans-serif; font-weight:800; font-size:0.82rem;
+      padding:7px 16px; border:none; border-radius:6px; cursor:pointer; transition:all .2s;
+    }
+    .btn-regen:hover { opacity:.88; }
+    .btn-regen:disabled { opacity:.4; cursor:not-allowed; }
+
+    /* ── PAGE ── */
+    .page { max-width:1400px; margin:0 auto; padding:36px 24px 80px; }
+    h2 { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800; margin-bottom:6px; }
+    .sub { color:var(--muted); font-size:0.9rem; margin-bottom:28px; }
+
+    /* ── ARM SELECTOR ── */
+    .arm-selector {
+      display:none; flex-wrap:wrap; gap:8px; margin-bottom:24px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:14px 16px;
+    }
+    .level-group { display:flex; align-items:center; gap:6px; }
+    .level-label {
+      font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.08em;
+      padding-right:8px; border-right:1px solid var(--border); margin-right:2px;
+    }
+    .arm-btn {
+      background:none; border:1px solid transparent; padding:5px 13px; border-radius:6px;
+      font-family:'Syne',sans-serif; font-size:0.82rem; font-weight:700;
+      color:var(--muted); cursor:pointer; transition:all .15s;
+    }
+    .arm-btn:hover { background:rgba(255,255,255,.06); color:var(--text); }
+    .arm-btn.active { background:rgba(240,165,0,.15); color:var(--accent); border-color:rgba(240,165,0,.3); }
+
+    /* ── TIMETABLE CARD ── */
+    .tt-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .tt-header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:16px 20px;
+      background:linear-gradient(135deg,rgba(240,165,0,.1),rgba(224,92,42,.06));
+      border-bottom:1px solid var(--border);
+    }
+    .tt-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.1rem; }
+    .tt-title span { color:var(--accent); }
+    .tt-meta { font-size:0.78rem; color:var(--muted); margin-top:3px; }
+    .tt-badge {
+      background:rgba(240,165,0,.12); color:var(--accent);
+      font-size:0.7rem; font-family:'Syne',sans-serif; font-weight:700;
+      padding:4px 12px; border-radius:20px; letter-spacing:.05em;
+      border:1px solid rgba(240,165,0,.25);
+    }
+
+    /* ── VERTICAL TABLE ── */
+    .tt-scroll { overflow-x:auto; }
+    table.vtt { width:100%; border-collapse:collapse; font-size:0.8rem; min-width:760px; }
+
+    /* Top-left corner */
+    table.vtt th.th-corner {
+      background:var(--surface); border:1px solid var(--border);
+      padding:10px 12px; width:110px; text-align:center;
+      font-family:'Syne',sans-serif; font-size:0.65rem; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.08em;
+    }
+
+    /* Day header cells */
+    table.vtt th.th-day {
+      border:1px solid var(--border); padding:12px 8px;
+      text-align:center; font-family:'Syne',sans-serif; font-size:0.78rem; font-weight:700;
+    }
+    table.vtt th.th-day .dname { font-size:0.92rem; display:block; }
+    table.vtt th.th-day .dhours { font-size:0.65rem; font-weight:400; color:var(--muted); margin-top:2px; display:block; }
+    table.vtt th.day-mon { color:var(--mon); border-top:3px solid var(--mon); background:rgba(88,166,255,.04); }
+    table.vtt th.day-tue { color:var(--tue); border-top:3px solid var(--tue); background:rgba(63,185,80,.04); }
+    table.vtt th.day-wed { color:var(--wed); border-top:3px solid var(--wed); background:rgba(240,165,0,.04); }
+    table.vtt th.day-thu { color:var(--thu); border-top:3px solid var(--thu); background:rgba(210,168,255,.04); }
+    table.vtt th.day-fri { color:var(--fri); border-top:3px solid var(--fri); background:rgba(255,161,152,.04); }
+
+    /* Time column */
+    table.vtt td.td-time {
+      background:var(--surface); border:1px solid var(--border);
+      padding:10px; text-align:center; vertical-align:middle;
+      white-space:nowrap; width:110px;
+    }
+    table.vtt td.td-time .pnum {
+      font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem;
+      color:var(--accent); display:block; margin-bottom:3px;
+    }
+    table.vtt td.td-time .ptime { font-size:0.68rem; color:var(--muted); line-height:1.5; }
+
+    /* Subject cells */
+    table.vtt td.td-cell {
+      border:1px solid var(--border); padding:10px;
+      text-align:center; vertical-align:middle; min-width:130px;
+      transition:filter .12s;
+    }
+    table.vtt tr:hover td.td-cell { filter:brightness(1.08); }
+    .cell-subj  { font-weight:600; font-size:0.82rem; color:var(--text); display:block; margin-bottom:3px; }
+    .cell-tchr  { font-size:0.71rem; color:var(--muted); display:block; }
+    .day-tag {
+      display:inline-block; font-size:0.62rem; font-family:'Syne',sans-serif;
+      font-weight:700; padding:1px 6px; border-radius:20px; margin-bottom:4px; letter-spacing:.04em;
+    }
+    .tag-mon { background:rgba(88,166,255,.12);  color:var(--mon); }
+    .tag-tue { background:rgba(63,185,80,.12);   color:var(--tue); }
+    .tag-wed { background:rgba(240,165,0,.12);   color:var(--wed); }
+    .tag-thu { background:rgba(210,168,255,.12); color:var(--thu); }
+    .tag-fri { background:rgba(255,161,152,.12); color:var(--fri); }
+    .free-cell { color:var(--muted); font-style:italic; font-size:0.78rem; }
+    .na-cell   { color:rgba(139,148,158,.2); font-size:0.75rem; }
+
+    /* Break rows */
+    table.vtt tr.row-break td.td-time { background:#0d1f14; color:var(--success); }
+    table.vtt tr.row-break td.td-cell { background:rgba(63,185,80,.04) !important; border-color:#1f3a28; }
+    .break-content { color:var(--success); font-weight:600; font-size:0.8rem; }
+
+    /* Close row */
+    table.vtt tr.row-close td { background:rgba(248,81,73,.03) !important; border-color:#2d1a1a; }
+    table.vtt tr.row-close td.td-time { background:#1a0d0d; color:var(--danger); }
+    .close-content { color:var(--danger); font-weight:600; font-size:0.8rem; }
+
+    /* Loading spinner */
+    .spinner-wrap { text-align:center; padding:80px 20px; color:var(--muted); }
+    .spinner {
+      width:40px; height:40px; border:3px solid var(--border);
+      border-top-color:var(--accent); border-radius:50%;
+      animation:spin .7s linear infinite; margin:0 auto 16px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Empty / warn states */
+    .empty-pg { text-align:center; padding:80px 20px; color:var(--muted); }
+    .empty-pg .icon { font-size:3rem; margin-bottom:16px; }
+    .empty-pg p { font-size:0.95rem; line-height:1.6; }
+    .warn-box {
+      background:rgba(240,165,0,.08); border:1px solid rgba(240,165,0,.3);
+      border-radius:8px; padding:14px 18px; font-size:0.88rem; color:var(--accent);
+    }
+
+    @media print {
+      header, .arm-selector, .btn-regen { display:none !important; }
+      .page { padding:0; max-width:100%; }
+      body { background:#fff; color:#000; }
+      table.vtt { font-size:8px; }
+      .tt-card { border:1px solid #ccc; }
+    }
+    @media (max-width:768px) {
+      table.vtt th.th-day .dhours { display:none; }
+      table.vtt td.td-cell { min-width:100px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-icon">📅</div>SchoolSync</div>
+  <div class="header-right">
+    <button class="btn-regen" id="btn-regen" onclick="regenerate()">⚡ Regenerate</button>
+    <button class="btn-sm" onclick="window.print()">🖨 Print</button>
+    <a href="/" class="btn-sm">← Back to Teachers</a>
+    <button class="btn-sm" onclick="logout()">Log out</button>
+  </div>
+</header>
+
+<div class="page">
+  <h2>Weekly Timetables</h2>
+  <p class="sub">
+    Vertical full-week view — each arm has a unique schedule.
+    Teachers are never double-booked and only appear in their assigned class levels.
+  </p>
+
+  <!-- ARM TABS (built dynamically) -->
+  <div class="arm-selector" id="arm-selector"></div>
+
+  <!-- OUTPUT -->
+  <div id="output">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <p>Loading timetable data…</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const DAYS      = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const DAY_CSS   = { Monday:'mon', Tuesday:'tue', Wednesday:'wed', Thursday:'thu', Friday:'fri' };
+const DAY_SHORT = { Monday:'MON', Tuesday:'TUE', Wednesday:'WED', Thursday:'THU', Friday:'FRI' };
+const DAY_HOURS = {
+  Monday:'8:00–4:00 PM', Tuesday:'8:00–4:00 PM', Wednesday:'8:00–4:00 PM',
+  Thursday:'8:00–4:00 PM', Friday:'8:00–2:00 PM'
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let timetableData = {};   // raw API response: { arm: { day: [slots] } }
+let currentArm    = '';
+
+async function logout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch(e) {}
+  window.location.href = '/login';
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => loadTimetable());
+
+// ─── Load timetable from API ──────────────────────────────────────────────────
+async function loadTimetable() {
+  setOutput(`<div class="spinner-wrap"><div class="spinner"></div><p>Loading…</p></div>`);
+  try {
+    const res  = await fetch('/api/timetables');
+    const data = await res.json();
+
+    if (!data || !Object.keys(data).length) {
+      setOutput(`<div class="empty-pg">
+        <div class="icon">📋</div>
+        <p>No timetable generated yet.<br>
+        Go back to <a href="/" style="color:var(--accent)">Teachers</a> and click
+        <strong>⚡ Generate Timetables</strong>.</p>
+      </div>`);
+      return;
+    }
+
+    timetableData = data;
+    buildArmSelector(Object.keys(data));
+    currentArm = Object.keys(data)[0];
+    activateArm(currentArm);
+    renderCurrentArm();
+
+  } catch(e) {
+    setOutput(`<div class="empty-pg">
+      <div class="icon">⚠️</div>
+      <p>Could not reach the server.<br>Make sure Flask is running on port 5000.</p>
+    </div>`);
+  }
+}
+
+// ─── Regenerate via API POST then reload ──────────────────────────────────────
+async function regenerate() {
+  const btn = document.getElementById('btn-regen');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating…';
+  try {
+    const res = await fetch('/api/generate', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error || 'Generation failed');
+      return;
+    }
+    timetableData = await res.json();
+    buildArmSelector(Object.keys(timetableData));
+    currentArm = Object.keys(timetableData)[0];
+    activateArm(currentArm);
+    renderCurrentArm();
+  } catch(e) {
+    alert('Cannot reach server. Is Flask running?');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Regenerate';
+  }
+}
+
+// ─── Build arm selector tabs ──────────────────────────────────────────────────
+function buildArmSelector(arms) {
+  // Group by level (e.g. JSS1A → JSS1)
+  const groups = {};
+  arms.forEach(arm => {
+    const lvl = levelOf(arm);
+    if (!groups[lvl]) groups[lvl] = [];
+    groups[lvl].push(arm);
+  });
+
+  const sel = document.getElementById('arm-selector');
+  sel.innerHTML = Object.entries(groups).map(([lvl, lvlArms]) => `
+    <div class="level-group">
+      <span class="level-label">${esc(lvl)}</span>
+      ${lvlArms.map(arm => `
+        <button class="arm-btn" data-arm="${arm}" onclick="switchArm('${arm}',this)">
+          ${esc(arm)}
+        </button>`).join('')}
+    </div>`).join('');
+  sel.style.display = 'flex';
+}
+
+// ─── Switch arm ───────────────────────────────────────────────────────────────
+function switchArm(arm, btn) {
+  currentArm = arm;
+  activateArm(arm);
+  renderCurrentArm();
+}
+
+function activateArm(arm) {
+  document.querySelectorAll('.arm-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.arm === arm);
+  });
+}
+
+// ─── Render the current arm's timetable ──────────────────────────────────────
+function renderCurrentArm() {
+  setOutput(renderArmTable(currentArm));
+}
+
+// ─── Render one vertical timetable ───────────────────────────────────────────
+function renderArmTable(arm) {
+  const armData = timetableData[arm];
+  if (!armData) return `<div class="warn-box">⚠️ No data found for ${esc(arm)}.</div>`;
+
+  // Build an ordered row key list using Monday as the anchor for periods,
+  // then merge in any breaks that exist in other days (e.g. Short Break Mon-Thu)
+  const rowKeys  = [];
+  const slotMeta = {};   // key → template slot
+
+  // Use Monday slots as the row anchor
+  const mondaySlots = armData['Monday'] || [];
+  mondaySlots.forEach(slot => {
+    const k = rowKey(slot);
+    if (k && !slotMeta[k]) { slotMeta[k] = slot; rowKeys.push({ key:k, ...slot }); }
+  });
+
+  // Add any breaks that appear in other days but not Monday (e.g. Short Break on Tue-Thu)
+  DAYS.forEach(day => {
+    (armData[day] || []).forEach(slot => {
+      if (slot.kind === 'break') {
+        const k = rowKey(slot);
+        if (k && !slotMeta[k]) { slotMeta[k] = slot; rowKeys.push({ key:k, ...slot }); }
+      }
+    });
+  });
+
+  // Per-day lookup: key → slot
+  const lookup = {};
+  DAYS.forEach(day => {
+    lookup[day] = {};
+    (armData[day] || []).forEach(slot => {
+      const k = rowKey(slot);
+      if (k) lookup[day][k] = slot;
+    });
+  });
+
+  // Period count per day (for column header)
+  const pCounts = {};
+  DAYS.forEach(d => { pCounts[d] = (armData[d]||[]).filter(s => s.kind === 'period').length; });
+
+  const level = levelOf(arm);
+
+  // thead
+  const thead = `<tr>
+    <th class="th-corner">Time</th>
+    ${DAYS.map(d => `
+      <th class="th-day day-${DAY_CSS[d]}">
+        <span class="dname">${d}</span>
+        <span class="dhours">${DAY_HOURS[d]} · ${pCounts[d]}P</span>
+      </th>`).join('')}
+  </tr>`;
+
+  // tbody
+  let tbody = '';
+
+  rowKeys.forEach(row => {
+    if (row.kind === 'break') {
+      tbody += `<tr class="row-break">
+        <td class="td-time">
+          <span class="ptime">${esc(row.start)}<br>– ${esc(row.end)}</span>
+        </td>
+        ${DAYS.map(day => {
+          const s = lookup[day][row.key];
+          return s
+            ? `<td class="td-cell"><div class="break-content">☕ ${esc(s.label)}</div></td>`
+            : `<td class="td-cell" style="opacity:.15;"></td>`;
+        }).join('')}
+      </tr>`;
+
+    } else if (row.kind === 'period') {
+      tbody += `<tr>
+        <td class="td-time">
+          <span class="pnum">P${row.slot_num}</span>
+          <span class="ptime">${esc(row.start)}<br>– ${esc(row.end)}</span>
+        </td>
+        ${DAYS.map(day => {
+          const s = lookup[day][row.key];
+          if (!s) {
+            // Period doesn't exist this day (Friday ends early)
+            return `<td class="td-cell"><span class="na-cell">—</span></td>`;
+          }
+          const subj    = s.subject || '';
+          const teacher = s.teacher || '';
+          const dc      = DAY_CSS[day];
+          if (!subj || subj === 'Free Period' || subj === '-') {
+            return `<td class="td-cell"><span class="free-cell">Free Period</span></td>`;
+          }
+          return `<td class="td-cell">
+            <span class="day-tag tag-${dc}">${DAY_SHORT[day]}</span>
+            <span class="cell-subj">${esc(subj)}</span>
+            <span class="cell-tchr">👤 ${esc(teacher)}</span>
+          </td>`;
+        }).join('')}
+      </tr>`;
+    }
+  });
+
+  // School closes row
+  tbody += `<tr class="row-close">
+    <td class="td-time"><span class="ptime" style="color:var(--danger);font-weight:700;">🔔 CLOSES</span></td>
+    ${DAYS.map(day => `
+      <td class="td-cell">
+        <div class="close-content">🔔 ${day === 'Friday' ? '2:00 PM' : '4:00 PM'}</div>
+      </td>`).join('')}
+  </tr>`;
+
+  return `
+    <div class="tt-card">
+      <div class="tt-header">
+        <div>
+          <div class="tt-title"><span>${esc(arm)}</span> — Weekly Timetable</div>
+          <div class="tt-meta">${esc(level)} · Mon–Thu closes 4:00 PM · Friday closes 2:00 PM</div>
+        </div>
+        <span class="tt-badge">📅 Full Week View</span>
+      </div>
+      <div class="tt-scroll">
+        <table class="vtt">
+          <thead>${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Level is the JSS prefix of the arm name (JSS1Gold -> JSS1)
+function levelOf(arm) { return (arm.match(/^JSS\d+/) || [arm])[0]; }
+
+// Build a stable lookup key for a slot from the engine's output format
+function rowKey(slot) {
+  if (slot.kind === 'period') return `p_${slot.slot_num}`;
+  if (slot.kind === 'break')  return `brk_${slot.start}`;
+  return null;   // 'close' rows are rendered separately
+}
+
+function setOutput(html) {
+  document.getElementById('output').innerHTML = html;
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

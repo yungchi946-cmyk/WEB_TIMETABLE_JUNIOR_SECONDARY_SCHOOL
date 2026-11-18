@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SchoolSync – Sign in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0d1117; --surface:#161b22; --card:#1c2333; --border:#30363d;
+      --accent:#f0a500; --accent2:#e05c2a; --text:#e6edf3; --muted:#8b949e;
+      --success:#3fb950; --danger:#f85149; --radius:10px;
+    }
+    body {
+      font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+      background-image: radial-gradient(circle at 15% 10%, rgba(240,165,0,.08), transparent 40%),
+                        radial-gradient(circle at 85% 90%, rgba(224,92,42,.08), transparent 40%);
+    }
+    .wrap { width:100%; max-width:440px; }
+    .logo {
+      font-family:'Syne',sans-serif; font-weight:800; font-size:1.4rem;
+      display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:26px;
+    }
+    .logo-icon {
+      width:38px; height:38px; background:linear-gradient(135deg,var(--accent),var(--accent2));
+      border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px;
+    }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+
+    .tabs { display:grid; grid-template-columns:1fr 1fr; background:var(--surface); border-bottom:1px solid var(--border); }
+    .tab {
+      background:none; border:none; padding:15px; cursor:pointer;
+      font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; color:var(--muted);
+      border-bottom:2px solid transparent; transition:all .2s;
+    }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+    form { padding:26px 26px 24px; display:flex; flex-direction:column; gap:18px; }
+    h1 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; }
+    .lead { color:var(--muted); font-size:0.85rem; margin-top:-10px; }
+
+    .row { display:flex; flex-direction:column; gap:7px; }
+    .row label { font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .input-wrap { position:relative; }
+    .form-control {
+      background:var(--surface); border:1px solid var(--border); border-radius:8px;
+      padding:11px 14px; font-family:'DM Sans',sans-serif; font-size:0.95rem; color:var(--text);
+      width:100%; outline:none; transition:border-color .2s;
+    }
+    .form-control:focus { border-color:var(--accent); }
+    .form-control::placeholder { color:var(--muted); }
+    .form-control.invalid { border-color:var(--danger); }
+    .has-toggle .form-control { padding-right:56px; }
+    .toggle {
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      background:none; border:none; color:var(--muted); cursor:pointer;
+      font-size:0.72rem; font-weight:600; padding:6px 8px; border-radius:5px;
+    }
+    .toggle:hover { color:var(--text); background:var(--border); }
+
+    .hint { font-size:0.75rem; color:var(--muted); min-height:1em; }
+    .hint.ok { color:var(--success); }
+    .hint.bad { color:var(--danger); }
+    .meter { height:4px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .meter > span { display:block; height:100%; width:0; background:var(--danger); transition:all .25s; }
+
+    .error {
+      display:none; background:rgba(248,81,73,.1); border:1px solid rgba(248,81,73,.35);
+      color:#ff938d; border-radius:8px; padding:10px 14px; font-size:0.85rem;
+    }
+    .error.show { display:block; }
+
+    .btn-submit {
+      background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#000;
+      font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem;
+      padding:13px; border:none; border-radius:10px; cursor:pointer; transition:all .2s;
+      box-shadow:0 4px 18px rgba(240,165,0,.22);
+    }
+    .btn-submit:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(240,165,0,.32); }
+    .btn-submit:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+    .switch { text-align:center; font-size:0.85rem; color:var(--muted); }
+    .switch button { background:none; border:none; color:var(--accent); font:inherit; font-weight:600; cursor:pointer; }
+    .switch button:hover { text-decoration:underline; }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><div class="logo-icon">📅</div>SchoolSync</div>
+
+  <div class="card">
+    <div class="tabs" role="tablist">
+      <button class="tab active" id="tab-login"  role="tab" onclick="setMode('login')">Log In</button>
+      <button class="tab"        id="tab-signup" role="tab" onclick="setMode('signup')">Sign Up</button>
+    </div>
+
+    <form id="form" novalidate autocomplete="on">
+      <div>
+        <h1 id="title">Welcome back</h1>
+      </div>
+      <p class="lead" id="lead">Log in to manage your school's timetable.</p>
+
+      <div class="error" id="error" role="alert"></div>
+
+      <!-- School (signup only) -->
+      <div class="row signup-only hidden">
+        <label for="school">School</label>
+        <input class="form-control" id="school" name="organization" placeholder="e.g. Greenfield Secondary School" maxlength="100" autocomplete="organization"/>
+      </div>
+
+      <!-- Email -->
+      <div class="row">
+        <label for="email">E-mail Account</label>
+        <input class="form-control" id="email" name="email" type="email" placeholder="you@school.com" autocomplete="email" maxlength="254"/>
+      </div>
+
+      <!-- Password (login) / New Password (signup) -->
+      <div class="row">
+        <label for="password" id="pw-label">Password</label>
+        <div class="input-wrap has-toggle">
+          <input class="form-control" id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" maxlength="128"/>
+          <button type="button" class="toggle" onclick="toggleVis('password', this)">Show</button>
+        </div>
+        <div class="signup-only hidden">
+          <div class="meter"><span id="meter-bar"></span></div>
+          <div class="hint" id="pw-hint">At least 8 characters.</div>
+        </div>
+      </div>
+
+      <!-- Create (confirm) password — signup only -->
+      <div class="row signup-only hidden">
+        <label for="password2">Create Password</label>
+        <div class="input-wrap has-toggle">
+          <input class="form-control" id="password2" type="password" placeholder="Re-enter the new password" autocomplete="new-password" maxlength="128"/>
+          <button type="button" class="toggle" onclick="toggleVis('password2', this)">Show</button>
+        </div>
+        <div class="hint" id="match-hint"></div>
+      </div>
+
+      <button class="btn-submit" id="submit" type="submit">Log In</button>
+
+      <div class="switch" id="switch">
+        Don't have an account? <button type="button" onclick="setMode('signup')">Sign up</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let mode = 'login';
+  const $ = id => document.getElementById(id);
+
+  // Allow /login?mode=signup
+  window.addEventListener('DOMContentLoaded', () => {
+    if (new URLSearchParams(location.search).get('mode') === 'signup') setMode('signup');
+    $('email').focus();
+  });
+
+  function setMode(m) {
+    mode = m;
+    const signup = m === 'signup';
+    $('tab-login').classList.toggle('active', !signup);
+    $('tab-signup').classList.toggle('active', signup);
+    document.querySelectorAll('.signup-only').forEach(el => el.classList.toggle('hidden', !signup));
+    $('title').textContent  = signup ? 'Create your account' : 'Welcome back';
+    $('lead').textContent   = signup ? 'Register your school to start building timetables.'
+                                     : "Log in to manage your school's timetable.";
+    $('pw-label').textContent = signup ? 'New Password' : 'Password';
+    $('password').placeholder = signup ? 'Choose a password' : 'Enter your password';
+    $('password').autocomplete = signup ? 'new-password' : 'current-password';
+    $('submit').textContent = signup ? 'Create Account' : 'Log In';
+    $('switch').innerHTML = signup
+      ? `Already have an account? <button type="button" onclick="setMode('login')">Log in</button>`
+      : `Don't have an account? <button type="button" onclick="setMode('signup')">Sign up</button>`;
+    showError('');
+    clearInvalid();
+  }
+
+  function toggleVis(id, btn) {
+    const el = $(id);
+    const show = el.type === 'password';
+    el.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+  }
+
+  function showError(msg) {
+    const e = $('error');
+    e.textContent = msg;
+    e.classList.toggle('show', !!msg);
+  }
+  function clearInvalid() { document.querySelectorAll('.form-control').forEach(i => i.classList.remove('invalid')); }
+  function invalid(id, msg) { $(id).classList.add('invalid'); $(id).focus(); showError(msg); return false; }
+
+  // ── Live feedback (signup) ──
+  function strength(pw) {
+    let s = 0;
+    if (pw.length >= 8) s++;
+    if (pw.length >= 12) s++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
+    if (/\d/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return s;   // 0..5
+  }
+  $('password').addEventListener('input', () => {
+    if (mode !== 'signup') return;
+    const pw = $('password').value, s = strength(pw);
+    const bar = $('meter-bar');
+    bar.style.width = (pw ? Math.max(s, 1) * 20 : 0) + '%';
+    bar.style.background = s <= 2 ? 'var(--danger)' : s === 3 ? 'var(--accent)' : 'var(--success)';
+    const hint = $('pw-hint');
+    hint.className = 'hint ' + (pw.length >= 8 ? 'ok' : '');
+    hint.textContent = pw.length >= 8
+      ? ['', 'Weak', 'Weak', 'Okay', 'Strong', 'Very strong'][s] + ' password'
+      : 'At least 8 characters.';
+    checkMatch();
+  });
+  $('password2').addEventListener('input', checkMatch);
+  function checkMatch() {
+    const h = $('match-hint'), a = $('password').value, b = $('password2').value;
+    if (!b) { h.textContent = ''; h.className = 'hint'; return; }
+    const ok = a === b;
+    h.textContent = ok ? 'Passwords match' : 'Passwords do not match';
+    h.className = 'hint ' + (ok ? 'ok' : 'bad');
+  }
+
+  // ── Submit ──
+  $('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearInvalid(); showError('');
+
+    const email = $('email').value.trim().toLowerCase();
+    const password = $('password').value;
+    const body = { email, password };
+
+    if (mode === 'signup') {
+      const school = $('school').value.trim();
+      if (school.length < 2) return invalid('school', 'Enter your school name.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return invalid('email', 'Enter a valid e-mail address.');
+      if (password.length < 8) return invalid('password', 'Password must be at least 8 characters.');
+      if (password !== $('password2').value) return invalid('password2', 'Passwords do not match.');
+      body.school = school;
+    } else {
+      if (!email) return invalid('email', 'Enter your e-mail address.');
+      if (!password) return invalid('password', 'Enter your password.');
+    }
+
+    const btn = $('submit');
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Please wait…';
+    try {
+      const res = await fetch(mode === 'signup' ? '/api/signup' : '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showError(data.error || 'Something went wrong. Please try again.'); return; }
+      window.location.href = '/';
+    } catch (err) {
+      showError('Cannot reach the server — is Flask running?');
+    } finally {
+      btn.disabled = false; btn.textContent = label;
+    }
+  });
+</script>
+</body>
+</html>

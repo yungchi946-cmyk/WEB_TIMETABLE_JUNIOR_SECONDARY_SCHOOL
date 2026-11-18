@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StaffModel – Timetable Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --card: #1c2333;
+      --border: #30363d;
+      --accent: #f0a500;
+      --accent2: #e05c2a;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --success: #3fb950;
+      --danger: #f85149;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .header-nav { display: flex; align-items: center; gap: 16px; }
+    .btn-nav {
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .2s;
+    }
+    .btn-nav:hover { opacity: .85; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 60px 32px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 10px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p { color: var(--muted); font-size: 1rem; max-width: 500px; }
+
+    /* ── STEPS INDICATOR ── */
+    .steps {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 0 32px;
+      display: flex;
+      gap: 0;
+    }
+    .step {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--muted);
+    }
+    .step.active { color: var(--accent); }
+    .step-num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.78rem;
+    }
+    .step.active .step-num { background: var(--accent); color: #000; }
+    .step-line { width: 40px; height: 2px; background: var(--border); margin: 0 8px; }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── TEACHER CARD ── */
+    .teacher-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: slideIn .35s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header-left { display: flex; align-items: center; gap: 10px; }
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .card-badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .card-header-actions { display: flex; gap: 8px; }
+
+    /* icon button */
+    .icon-btn {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 15px;
+      transition: all .2s;
+    }
+    .icon-btn:hover { background: var(--border); color: var(--text); }
+    .icon-btn.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+    /* ── FORM BODY ── */
+    .card-body { padding: 24px; display: flex; flex-direction: column; gap: 22px; }
+
+    .form-row { display: flex; flex-direction: column; gap: 8px; }
+    .form-row label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .form-control {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      width: 100%;
+      transition: border-color .2s;
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--accent); }
+    .form-control::placeholder { color: var(--muted); }
+
+    /* ── AVAILABILITY CHECKBOXES (removed from UI, keep style for reference) ── */
+    /* (kept empty to avoid breaking anything else) */
+
+    /* ── CLASSES TAUGHT ── */
+    .classes-grid {
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+    .class-check {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: 'Syne', sans-serif;
+      transition: all .2s;
+      user-select: none;
+    }
+    .class-check input { display: none; }
+    .class-check .box {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      transition: all .2s;
+    }
+    .class-check input:checked ~ .box {
+      background: var(--accent2);
+      border-color: var(--accent2);
+      color: #fff;
+    }
+    .class-check:has(input:checked) {
+      border-color: var(--accent2);
+      background: rgba(224,92,42,.1);
+      color: var(--text);
+    }
+    .tag.cls {
+      background: rgba(224,92,42,.12);
+      color: #e07a5f;
+      border: 1px solid rgba(224,92,42,.28);
+    }
+
+    /* ── SUBJECTS SECTION ── */
+    .subjects-list { display: flex; flex-direction: column; gap: 8px; }
+    .subject-row {
+      display: flex; gap: 8px; align-items: center;
+      animation: slideIn .25s ease;
+    }
+    .subject-row .form-control { flex: 1; }
+    .remove-subject {
+      width: 34px; height: 34px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--danger);
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all .2s;
+    }
+    .remove-subject:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    .add-subject-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      width: 100%;
+    }
+    .add-subject-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── CARD FOOTER ── */
+    .card-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 10px 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    /* ── SAVED TEACHERS LIST ── */
+    .saved-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .saved-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .saved-count {
+      background: var(--success);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .saved-list { display: flex; flex-direction: column; }
+
+    .saved-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      transition: background .2s;
+      animation: slideIn .3s ease;
+    }
+    .saved-item:last-child { border-bottom: none; }
+    .saved-item:hover { background: rgba(255,255,255,.02); }
+
+    .saved-info { flex: 1; min-width: 0; }
+    .saved-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+    .saved-meta {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      font-size: 0.8rem;
+    }
+    .tag {
+      background: rgba(240,165,0,.12);
+      color: var(--accent);
+      border: 1px solid rgba(240,165,0,.25);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    /* ── CLASS ARMS ── */
+    .arms-section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .arms-body { padding: 8px 20px 12px; display: flex; flex-direction: column; }
+    .arms-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .arms-row:last-child { border-bottom: none; }
+    .arms-level { font-family: 'Syne', sans-serif; font-weight: 700; width: 56px; }
+    .arm-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 120px; }
+    .arm-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(224,92,42,.12); color: #e07a5f; border: 1px solid rgba(224,92,42,.28);
+      border-radius: 6px; padding: 3px 6px 3px 10px; font-size: 0.8rem; font-weight: 600;
+    }
+    .arm-chip button { background: none; border: none; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+    .arm-chip button:hover { color: var(--danger); }
+    .arms-none { color: var(--muted); font-size: 0.8rem; font-style: italic; }
+    .arm-add { display: flex; gap: 6px; }
+    .arm-add .form-control { width: 110px; padding: 6px 10px; font-size: 0.85rem; }
+    .arm-add .btn { padding: 6px 14px; font-size: 0.8rem; }
+    .arms-hint { padding: 0 20px 14px; color: var(--muted); font-size: 0.78rem; }
+
+    /* ── ADD TEACHER BTN ── */
+    .add-teacher-wrap {
+      display: flex; justify-content: center;
+    }
+    .add-teacher-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: transparent;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 18px 32px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--muted);
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      transition: all .2s;
+    }
+    .add-teacher-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(240,165,0,.04);
+    }
+    .add-teacher-btn .plus { font-size: 1.4rem; line-height: 1; }
+
+    /* ── GENERATE BTN ── */
+    .generate-wrap {
+      display: flex; justify-content: flex-end; gap: 12px;
+    }
+    .btn-generate {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all .2s;
+      box-shadow: 0 4px 18px rgba(240,165,0,.25);
+    }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(240,165,0,.35); }
+    .btn-generate:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--success);
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-size: 0.88rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      z-index: 500;
+      transform: translateX(120%);
+      transition: transform .3s ease;
+      max-width: 280px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.error { border-left-color: var(--danger); }
+
+    /* ── MODAL (edit) ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 400;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%; max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(.95);
+      transition: transform .25s;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal-head {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+    }
+    .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .modal-foot {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📅</div>
+    StaffModelSycn
+  </div>
+  <nav class="header-nav">
+    <span id="school-name" style="color:var(--muted);font-size:.85rem;"></span>
+    <a href="timetable" class="btn-nav">View Timetables →</a>
+    <button class="btn btn-ghost" style="padding:7px 14px;font-size:.82rem;" onclick="logout()">Log out</button>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Add <span>Teachers</span> &amp;<br>Generate Timetables</h1>
+  <p>Register all teachers with their subjects and classes before generating class timetables. Teachers are present every day.</p>
+</div>
+
+<!-- STEPS -->
+<div class="steps">
+  <div class="step active">
+    <div class="step-num">1</div>
+    Add Teachers
+  </div>
+  <div class="step-line"></div>
+  <div class="step">
+    <div class="step-num">2</div>
+    Generate Timetables
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main">
+
+  <!-- Class Arms -->
+  <div class="arms-section">
+    <div class="saved-header">Class Arms</div>
+    <div class="arms-body" id="arms-body"></div>
+    <div class="arms-hint">Set the arms your school has for each level (e.g. A, B, C, D or Gold, Silver). Timetables are generated for every arm listed here.</div>
+  </div>
+
+  <!-- Dynamic teacher forms rendered here -->
+  <div id="forms-container"></div>
+
+  <!-- Add Another Teacher -->
+  <div class="add-teacher-wrap">
+    <button class="add-teacher-btn" onclick="addTeacherForm()">
+      <span class="plus">＋</span> Add Another Teacher
+    </button>
+  </div>
+
+  <!-- Saved Teachers -->
+  <div class="saved-section" id="saved-section">
+    <div class="saved-header">
+      Saved Teachers
+      <span class="saved-count" id="saved-count">0</span>
+    </div>
+    <div class="saved-list" id="saved-list">
+      <div class="empty-state">
+        <div class="icon">🧑‍🏫</div>
+        <p>No teachers saved yet. Fill in a form above and click Save.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <div class="generate-wrap">
+    <button class="btn-generate" id="gen-btn" onclick="goGenerate()" disabled>
+      ⚡ Generate Timetables
+    </button>
+  </div>
+
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      ✏️ Edit Teacher
+      <button class="icon-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let teachers = [];
+  let formCount = 0;
+  let editingId = null;
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    addTeacherForm();
+    loadMe();
+    await loadArms();
+    await loadTeachersFromAPI();
+  });
+
+  async function loadTeachersFromAPI() {
+    try {
+      const res = await fetch('/api/teachers');
+      teachers = await res.json();
+      renderSaved();
+      updateGenBtn();
+    } catch(e) {
+      renderSaved();
+    }
+  }
+
+  // ── Account ──
+  async function loadMe() {
+    try {
+      const res = await fetch('/api/me');
+      if (res.status === 401) { window.location.href = '/login'; return; }
+      const me = await res.json();
+      document.getElementById('school-name').textContent = '🏫 ' + me.school;
+    } catch(e) {}
+  }
+  async function logout() {
+    try { await fetch('/api/logout', { method: 'POST' }); } catch(e) {}
+    window.location.href = '/login';
+  }
+
+  // ── Class arms ──
+  let arms = {};
+
+  async function loadArms() {
+    try {
+      const res = await fetch('/api/arms');
+      arms = await res.json();
+    } catch(e) { arms = {}; }
+    renderArms();
+  }
+
+  function renderArms() {
+    document.getElementById('arms-body').innerHTML = ALL_CLASSES.map(lvl => {
+      const list = arms[lvl] || [];
+      const chips = list.length
+        ? list.map(n => `<span class="arm-chip">${esc(lvl + n)}<button title="Remove" onclick="removeArm('${lvl}','${esc(n)}')">×</button></span>`).join('')
+        : `<span class="arms-none">No arms — this level will be skipped</span>`;
+      return `
+        <div class="arms-row">
+          <div class="arms-level">${lvl}</div>
+          <div class="arm-chips">${chips}</div>
+          <div class="arm-add">
+            <input class="form-control" id="arm-input-${lvl}" placeholder="New arm…" maxlength="12" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') addArm('${lvl}')"/>
+            <button class="btn btn-primary" onclick="addArm('${lvl}')">Add</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function addArm(level) {
+    const input = document.getElementById(`arm-input-${level}`);
+    const name = input.value.trim();
+    if (!name) { showToast('Enter an arm name, e.g. D', true); return; }
+    try {
+      const res = await fetch('/api/arms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level, name })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(`❌ ${data.error || 'Could not add arm'}`, true); return; }
+      arms = data;
+      renderArms();
+      document.getElementById(`arm-input-${level}`).focus();
+      showToast(`✅ ${level}${name} added`);
+    } catch(e) { showToast('❌ Cannot reach server — is Flask running?', true); }
+  }
+
+  async function removeArm(level, name) {
+    try {
+      const res = await fetch(`/api/arms/${level}/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      arms = await res.json();
+      renderArms();
+      showToast(`${level}${name} removed. Regenerate to update timetables.`);
+    } catch(e) { showToast('❌ Could not remove arm', true); }
+  }
+
+  function addTeacherForm() {
+    formCount++;
+    const id = `form-${Date.now()}`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'teacher-card';
+    wrapper.id = id;
+    wrapper.innerHTML = formHTML(id, formCount);
+    document.getElementById('forms-container').appendChild(wrapper);
+    addSubjectRow(id);
+  }
+
+  const ALL_CLASSES = ['JSS1','JSS2','JSS3'];
+
+  function formHTML(id, num) {
+    const classCheckboxes = ALL_CLASSES.map(c => `
+      <label class="class-check">
+        <input type="checkbox" name="class-${id}" value="${c}">
+        <span class="box">✓</span> ${c}
+      </label>`).join('');
+
+    return `
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="card-title">Teacher #${num}</div>
+        </div>
+        <div class="card-header-actions">
+          <button class="icon-btn danger" title="Remove form" onclick="removeForm('${id}')">🗑</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <label>Full Name</label>
+          <input class="form-control" id="name-${id}" placeholder="Enter name..." autocomplete="off"/>
+        </div>
+        <div class="form-row">
+          <label>Classes Taught</label>
+          <div class="classes-grid" id="classes-${id}">${classCheckboxes}</div>
+        </div>
+        <div class="form-row">
+          <label>Subjects Taught</label>
+          <div class="subjects-list" id="subjects-${id}"></div>
+          <button class="add-subject-btn" onclick="addSubjectRow('${id}')">＋ Add Subject</button>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="resetForm('${id}')">Reset</button>
+        <button class="btn btn-primary" onclick="saveTeacher('${id}')">💾 Save Teacher</button>
+      </div>`;
+  }
+
+  function addSubjectRow(formId) {
+    const container = document.getElementById(`subjects-${formId}`);
+    const row = document.createElement('div');
+    row.className = 'subject-row';
+    row.innerHTML = `
+      <input class="form-control" placeholder="e.g. Mathematics" autocomplete="off"/>
+      <button class="remove-subject" onclick="this.parentElement.remove()" title="Remove">×</button>`;
+    container.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  function removeForm(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function resetForm(id) {
+    document.getElementById(`name-${id}`).value = '';
+    document.querySelectorAll(`[name="class-${id}"]`).forEach(c => c.checked = false);
+    const subj = document.getElementById(`subjects-${id}`);
+    subj.innerHTML = '';
+    addSubjectRow(id);
+  }
+
+  async function saveTeacher(id) {
+    const name = document.getElementById(`name-${id}`).value.trim();
+    if (!name) { showToast('Please enter the teacher\'s name.', true); return; }
+
+    const classes = [...document.querySelectorAll(`[name="class-${id}"]:checked`)].map(c => c.value);
+    if (!classes.length) { showToast('Select at least one class level.', true); return; }
+
+    const inputs = document.querySelectorAll(`#subjects-${id} .subject-row input`);
+    const subjects = [...inputs].map(i => i.value.trim()).filter(Boolean);
+    if (!subjects.length) { showToast('Add at least one subject.', true); return; }
+
+    // Days are no longer collected – teacher is available every day
+    const teacher = { name, classes, subjects };
+
+    try {
+      const res = await fetch('/api/teachers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teacher)
+      });
+      if (!res.ok) throw new Error('API error');
+      const saved = await res.json();
+      teachers.push(saved);
+    } catch(e) {
+      showToast('❌ Could not save — is the Flask server running?', true); return;
+    }
+
+    renderSaved();
+    removeForm(id);
+    showToast(`✅ ${name} saved successfully!`);
+    updateGenBtn();
+  }
+
+  function renderSaved() {
+    const list = document.getElementById('saved-list');
+    const cnt  = document.getElementById('saved-count');
+    cnt.textContent = teachers.length;
+
+    if (!teachers.length) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🧑‍🏫</div><p>No teachers saved yet. Fill in a form above and click Save.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = teachers.map(t => `
+      <div class="saved-item" id="saved-${t.id}">
+        <div class="saved-info">
+          <div class="saved-name">${esc(t.name)}</div>
+          <div class="saved-meta">
+            ${(t.classes||[]).map(c=>`<span class="tag cls">${c}</span>`).join('')}
+            ${t.subjects.map(s=>`<span class="tag">${esc(s)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="saved-actions">
+          <button class="icon-btn" title="Edit" onclick="openEdit(${t.id})">✏️</button>
+          <button class="icon-btn danger" title="Delete" onclick="deleteTeacher(${t.id})">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function deleteTeacher(id) {
+    try {
+      await fetch(`/api/teachers/${id}`, { method: 'DELETE' });
+    } catch(e) {}
+    teachers = teachers.filter(t => t.id !== id);
+    renderSaved();
+    updateGenBtn();
+    showToast('Teacher removed.');
+  }
+
+  function openEdit(id) {
+    editingId = id;
+    const t = teachers.find(t => t.id === id);
+    if (!t) return;
+
+    const classCheckboxes = ALL_CLASSES.map(c => `
+      <label class="class-check">
+        <input type="checkbox" name="edit-class" value="${c}" ${(t.classes||[]).includes(c)?'checked':''}>
+        <span class="box">✓</span> ${c}
+      </label>`).join('');
+
+    const subjectRows = t.subjects.map((s,i) => `
+      <div class="subject-row">
+        <input class="form-control edit-subject" value="${esc(s)}" placeholder="Subject"/>
+        <button class="remove-subject" onclick="this.parentElement.remove()">×</button>
+      </div>`).join('');
+
+    document.getElementById('modal-body').innerHTML = `
+      <div class="form-row">
+        <label>Full Name</label>
+        <input class="form-control" id="edit-name" value="${esc(t.name)}" placeholder="Enter name..."/>
+      </div>
+      <div class="form-row">
+        <label>Classes Taught</label>
+        <div class="classes-grid">${classCheckboxes}</div>
+      </div>
+      <div class="form-row">
+        <label>Subjects Taught</label>
+        <div class="subjects-list" id="edit-subjects-list">${subjectRows}</div>
+        <button class="add-subject-btn" onclick="addEditSubject()">＋ Add Subject</button>
+      </div>`;
+
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function addEditSubject() {
+    const container = document.getElementById('edit-subjects-list');
+    const row = document.createElement('div');
+    row.className = 'subject-row';
+    row.innerHTML = `<input class="form-control edit-subject" placeholder="Subject"/><button class="remove-subject" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  async function saveEdit() {
+    const name = document.getElementById('edit-name').value.trim();
+    if (!name) { showToast('Name is required.', true); return; }
+    const classes = [...document.querySelectorAll('[name="edit-class"]:checked')].map(c => c.value);
+    if (!classes.length) { showToast('Select at least one class level.', true); return; }
+    const subjects = [...document.querySelectorAll('.edit-subject')].map(i=>i.value.trim()).filter(Boolean);
+    if (!subjects.length) { showToast('Add at least one subject.', true); return; }
+
+    try {
+      const res = await fetch(`/api/teachers/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, classes, subjects })
+      });
+      if (!res.ok) throw new Error();
+      const saved = await res.json();
+      const idx = teachers.findIndex(t => t.id === editingId);
+      if (idx !== -1) teachers[idx] = saved;
+    } catch(e) {
+      showToast('❌ Could not update — is the Flask server running?', true); return;
+    }
+
+    renderSaved();
+    closeModal();
+    showToast(`✅ ${name} updated!`);
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    editingId = null;
+  }
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  function updateGenBtn() {
+    document.getElementById('gen-btn').disabled = teachers.length === 0;
+  }
+
+  async function goGenerate() {
+    if (!teachers.length) return;
+    try {
+      const res = await fetch('/api/generate', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(`❌ ${err.error || 'Generation failed'}`, true); return;
+      }
+      showToast('⚡ Timetable generated! Redirecting…');
+      setTimeout(() => { window.location.href = '/timetable'; }, 900);
+    } catch(e) {
+      showToast('❌ Cannot reach server — is Flask running?', true);
+    }
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function showToast(msg, error=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (error ? ' error' : '');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
